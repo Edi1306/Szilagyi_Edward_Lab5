@@ -33,8 +33,7 @@ namespace Szilagyi_Edward_Lab5
     {
         ActionState action = ActionState.Nothing;
         AutoLotEntitiesModel ctx = new AutoLotEntitiesModel();
-        CollectionViewSource customerVSource;
-        CollectionViewSource inventoryVSource;
+        CollectionViewSource customerVSource, inventoryVSource;
         CollectionViewSource customerOrdersVSource;
         public MainWindow()
         {
@@ -44,36 +43,40 @@ namespace Szilagyi_Edward_Lab5
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            customerVSource = ((System.Windows.Data.CollectionViewSource)(this.FindResource("customerViewSource")));
-            customerVSource.Source = ctx.Customers.Local;
-            customerOrdersVSource = ((System.Windows.Data.CollectionViewSource)(this.FindResource("customerOrdersViewSource")));
-            //customerOrdersVSource.Source = ctx.Orders.Local;
-            ctx.Customers.Load();
-            inventoryVSource = ((System.Windows.Data.CollectionViewSource)(this.FindResource("inventoryViewSource")));
+
+            inventoryVSource = (CollectionViewSource)FindResource("inventoryViewSource");
             inventoryVSource.Source = ctx.Inventories.Local;
+
+            customerVSource = (CollectionViewSource)this.FindResource("customerViewSource");
+            customerVSource.Source = ctx.Customers.Local;
+            ctx.Customers.Load();
+
+            customerOrdersVSource =
+            (CollectionViewSource)FindResource("customerOrdersViewSource");
+
+            //customerOrdersVSource.Source = ctx.Orders.Local;
             ctx.Orders.Load();
             ctx.Inventories.Load();
             cmbCustomers.ItemsSource = ctx.Customers.Local;
             //cmbCustomers.DisplayMemberPath = "FirstName";
             cmbCustomers.SelectedValuePath = "CustId";
+
             cmbInventory.ItemsSource = ctx.Inventories.Local;
             //cmbInventory.DisplayMemberPath = "Make";
             cmbInventory.SelectedValuePath = "CarId";
-            System.Windows.Data.CollectionViewSource customerViewSource = ((System.Windows.Data.CollectionViewSource)(this.FindResource("customerViewSource")));
-            // Load data by setting the CollectionViewSource.Source property:
-            // customerViewSource.Source = [generic data source]
-            System.Windows.Data.CollectionViewSource inventoryViewSource = ((System.Windows.Data.CollectionViewSource)(this.FindResource("inventoryViewSource")));
-            // Load data by setting the CollectionViewSource.Source property:
-            // inventoryViewSource.Source = [generic data source]
             BindDataGrid();
         }
+
+
         private void btnAdd_Click(object sender, RoutedEventArgs e)
         {
             action = ActionState.New;
+            SetValidationBinding();
         }
         private void btnEdit_Click(object sender, RoutedEventArgs e)
         {
             action = ActionState.Edit;
+            SetValidationBinding();
         }
         private void btnDelete_Click(object sender, RoutedEventArgs e)
         {
@@ -83,17 +86,9 @@ namespace Szilagyi_Edward_Lab5
         {
             customerVSource.View.MoveCurrentToNext();
         }
-        private void btnPrevious_Click(object sender, RoutedEventArgs e)
+        private void btnPrev_Click(object sender, RoutedEventArgs e)
         {
             customerVSource.View.MoveCurrentToPrevious();
-        }
-        private void btnNextI_Click(object sender, RoutedEventArgs e)
-        {
-            inventoryVSource.View.MoveCurrentToNext();
-        }
-        private void btnPreviousI_Click(object sender, RoutedEventArgs e)
-        {
-            inventoryVSource.View.MoveCurrentToPrevious();
         }
         private void SaveCustomers()
         {
@@ -121,7 +116,7 @@ namespace Szilagyi_Edward_Lab5
                 }
             }
             else
-            if (action == ActionState.Edit)
+           if (action == ActionState.Edit)
             {
                 try
                 {
@@ -150,6 +145,116 @@ namespace Szilagyi_Edward_Lab5
                 }
                 customerVSource.View.Refresh();
             }
+
+        }
+        private void btnNext1_Click(object sender, RoutedEventArgs e)
+        {
+            customerVSource.View.MoveCurrentToNext();
+        }
+        private void btnPrev1_Click(object sender, RoutedEventArgs e)
+        {
+            customerVSource.View.MoveCurrentToPrevious();
+        }
+        private void SaveInventory()
+        {
+            Inventory inventory = null;
+            if (action == ActionState.New)
+            {
+                try
+                {
+                    //instantiem Customer entity
+                    inventory = new Inventory()
+                    {
+                        Color = colorTextBox.Text.Trim(),
+                        Make = makeTextBox.Text.Trim()
+                    };
+                    //adaugam entitatea nou creata in context
+                    ctx.Inventories.Add(inventory);
+                    inventoryVSource.View.Refresh();
+                    //salvam modificarile
+                    ctx.SaveChanges();
+                }
+                //using System.Data;
+                catch (DataException ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+            else
+           if (action == ActionState.Edit)
+            {
+                try
+                {
+                    inventory = (Inventory)customerDataGrid.SelectedItem;
+                    inventory.Color = colorTextBox.Text.Trim();
+                    inventory.Make = makeTextBox.Text.Trim();
+                    //salvam modificarile
+                    ctx.SaveChanges();
+                }
+                catch (DataException ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+            else if (action == ActionState.Delete)
+            {
+                try
+                {
+                    inventory = (Inventory)inventoryDataGrid.SelectedItem;
+                    ctx.Inventories.Remove(inventory);
+                    ctx.SaveChanges();
+                }
+                catch (DataException ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+                inventoryVSource.View.Refresh();
+            }
+
+        }
+        private void gbOperations_Click(object sender, RoutedEventArgs e)
+        {
+            Button SelectedButton = (Button)e.OriginalSource;
+            Panel panel = (Panel)SelectedButton.Parent;
+
+            foreach (Button B in panel.Children.OfType<Button>())
+            {
+                if (B != SelectedButton)
+                    B.IsEnabled = false;
+            }
+            gbActions.IsEnabled = true;
+        }
+        private void ReInitialize()
+        {
+
+            Panel panel = gbOperations.Content as Panel;
+            foreach (Button B in panel.Children.OfType<Button>())
+            {
+                B.IsEnabled = true;
+            }
+            gbActions.IsEnabled = false;
+        }
+        private void btnCancel_Click(object sender, RoutedEventArgs e)
+        {
+            ReInitialize();
+        }
+        private void btnSave_Click(object sender, RoutedEventArgs e)
+        {
+            TabItem ti = tabControl.SelectedItem as TabItem;
+
+            switch (ti.Header)
+            {
+                case "Customers":
+                    SaveCustomers();
+                    break;
+                case "Inventory":
+                    SaveInventory();
+                    break;
+                case "Orders":
+                    SaveOrders();
+                    break;
+            }
+            ReInitialize();
         }
         private void SaveOrders()
         {
@@ -163,8 +268,9 @@ namespace Szilagyi_Edward_Lab5
                     //instantiem Order entity
                     order = new Order()
                     {
+
                         CustId = customer.CustId,
-                        CarId = inventory.CarID
+                        CarId = inventory.CarId
                     };
                     //adaugam entitatea nou creata in context
                     ctx.Orders.Add(order);
@@ -176,9 +282,9 @@ namespace Szilagyi_Edward_Lab5
                 {
                     MessageBox.Show(ex.Message);
                 }
-
             }
-            else if (action == ActionState.Edit)
+            else
+if (action == ActionState.Edit)
             {
                 dynamic selectedOrder = ordersDataGrid.SelectedItem;
                 try
@@ -187,7 +293,7 @@ namespace Szilagyi_Edward_Lab5
                     var editedOrder = ctx.Orders.FirstOrDefault(s => s.OrderId == curr_id);
                     if (editedOrder != null)
                     {
-                        editedOrder.CustId = Int32.Parse(cmbCustomers.SelectedValue.ToString());
+                        editedOrder.CustId = int.Parse(cmbCustomers.SelectedValue.ToString());
                         editedOrder.CarId = Convert.ToInt32(cmbInventory.SelectedValue.ToString());
                         //salvam modificarile
                         ctx.SaveChanges();
@@ -228,7 +334,7 @@ namespace Szilagyi_Edward_Lab5
                              join cust in ctx.Customers on ord.CustId equals
                              cust.CustId
                              join inv in ctx.Inventories on ord.CarId
-                 equals inv.CarID
+                 equals inv.CarId
                              select new
                              {
                                  ord.OrderId,
@@ -241,101 +347,33 @@ namespace Szilagyi_Edward_Lab5
                              };
             customerOrdersVSource.Source = queryOrder.ToList();
         }
-        private void SaveInventory()
+        private void SetValidationBinding()
         {
-            Inventory inventory = null;
-            if (action == ActionState.New)
-            {
-                try
-                {
-                    //instantiem Inventory entity
-                    inventory = new Inventory()
-                    {
-                        Color = colorTextBox.Text.Trim(),
-                        Make = makeTextBox.Text.Trim()
-                    };
-                    //adaugam entitatea nou creata in context
-                    ctx.Inventories.Add(inventory);
-                    inventoryVSource.View.Refresh();
-                    //salvam modificarile
-                    ctx.SaveChanges();
-                }
-                //using System.Data;
-                catch (DataException ex)
-                {
-                    MessageBox.Show(ex.Message);
-                }
-            }
-            else
-            if (action == ActionState.Edit)
-            {
-                try
-                {
-                    inventory = (Inventory)inventoryDataGrid.SelectedItem;
-                    inventory.Color = colorTextBox.Text.Trim();
-                    inventory.Make = makeTextBox.Text.Trim();
-                    //salvam modificarile
-                    ctx.SaveChanges();
-                }
-                catch (DataException ex)
-                {
-                    MessageBox.Show(ex.Message);
-                }
-            }
-            else if (action == ActionState.Delete)
-            {
-                try
-                {
-                    inventory = (Inventory)inventoryDataGrid.SelectedItem;
-                    ctx.Inventories.Remove(inventory);
-                    ctx.SaveChanges();
-                }
-                catch (DataException ex)
-                {
-                    MessageBox.Show(ex.Message);
-                }
-                inventoryVSource.View.Refresh();
-            }
+            Binding firstNameValidationBinding = new Binding();
+            firstNameValidationBinding.Source = customerVSource;
+            firstNameValidationBinding.Path = new PropertyPath("FirstName");
+            firstNameValidationBinding.NotifyOnValidationError = true;
+            firstNameValidationBinding.Mode = BindingMode.TwoWay;
+            firstNameValidationBinding.UpdateSourceTrigger =
+           UpdateSourceTrigger.PropertyChanged;
+            //string required
+            firstNameValidationBinding.ValidationRules.Add(new StringNotEmpty());
+            firstNameTextBox.SetBinding(TextBox.TextProperty,
+           firstNameValidationBinding);
+            Binding lastNameValidationBinding = new Binding();
+            lastNameValidationBinding.Source = customerVSource;
+            lastNameValidationBinding.Path = new PropertyPath("LastName");
+            lastNameValidationBinding.NotifyOnValidationError = true;
+            lastNameValidationBinding.Mode = BindingMode.TwoWay;
+            lastNameValidationBinding.UpdateSourceTrigger =
+           UpdateSourceTrigger.PropertyChanged;
+            //string min length validator
+            lastNameValidationBinding.ValidationRules.Add(new
+           StringMinLengthValidator());
+            lastNameTextBox.SetBinding(TextBox.TextProperty,
+           lastNameValidationBinding); //setare binding nou
         }
-        private void gbOperations_Click(object sender, RoutedEventArgs e)
-        {
-            Button SelectedButton = (Button)e.OriginalSource;
-            Panel panel = (Panel)SelectedButton.Parent;
-            foreach (Button B in panel.Children.OfType<Button>())
-            {
-                if (B != SelectedButton)
-                    B.IsEnabled = false;
-            }
-            gbActions.IsEnabled = true;
-        }
-        private void ReInitialize()
-        {
-            Panel panel = gbOperations.Content as Panel;
-            foreach (Button B in panel.Children.OfType<Button>())
-            {
-                B.IsEnabled = true;
-            }
-            gbActions.IsEnabled = false;
-        }
-        private void btnCancel_Click(object sender, RoutedEventArgs e)
-        {
-            ReInitialize();
-        }
-        private void btnSave_Click(object sender, RoutedEventArgs e)
-        {
-            TabItem ti = tbCtrlAutoLot.SelectedItem as TabItem;
-            switch (ti.Header)
-            {
-                case "Customers":
-                    SaveCustomers();
-                    break;
-                case "Inventory":
-                    SaveInventory();
-                    break;
-                case "Orders":
-                    break;
-            }
-            ReInitialize();
-        }
+
     }
+
 }
